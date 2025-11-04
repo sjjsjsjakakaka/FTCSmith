@@ -1,0 +1,89 @@
+public class MyFIRSTJavaOpMode extends LinearOpMode {
+    DcMotor motorLeft;
+    DcMotor motorRight;
+    DcMotor frontLeft;
+    DcMotor frontRight;
+    ColorSensor color1;
+    DistanceSensor distance1;
+    BNO055IMU imu;
+
+    @Override
+    public void runOpMode() {
+        motorLeft  = hardwareMap.get(DcMotor.class, "motorLeft");
+        motorRight = hardwareMap.get(DcMotor.class, "motorRight");
+        frontLeft  = hardwareMap.get(DcMotor.class, "frontLeft");
+        frontRight = hardwareMap.get(DcMotor.class, "frontRight");
+        color1     = hardwareMap.get(ColorSensor.class, "color1");
+        distance1  = hardwareMap.get(DistanceSensor.class, "distance1");  // initialize this too
+        waitForStart();
+
+        motorLeft.setPower(-0.5);
+        motorRight.setPower(0.5);
+        telemetry.addData("SYSTEM", "Start");
+        telemetry.update();
+        while (opModeIsActive()) {
+        telemetry.addData("Red Value", color1.red());
+        telemetry.addData("Blue Value", color1.blue());
+        telemetry.update();
+
+
+            if (color1.red() == 255) {
+                telemetry.addData("SYSTEM", "Left");
+                telemetry.update();
+                movementType("left");
+                break;
+            } else if (color1.blue() == 255) {
+                telemetry.addData("SYSTEM", "Right");
+                telemetry.update();
+                movementType("right");
+                break;
+            }
+        }
+
+        sleep(450);
+        movementType("stop");
+        sleep(100);
+        movementType("forward");
+        sleep(600);
+        movementType("stop");
+        telemetry.addData("SYSTEM", "Finished");
+        telemetry.update();
+    }
+
+    void movementType(String type) { /* 11/ for ease */
+        switch (type) {
+            case "left":
+                motorLeft.setPower(1);
+                motorRight.setPower(1);
+                break;
+            case "right":
+                motorLeft.setPower(-1);
+                motorRight.setPower(-1);
+                break;
+            case "forward":
+                motorLeft.setPower(-1);
+                motorRight.setPower(1);
+                break;
+            case "backward":
+                motorLeft.setPower(1);
+                motorRight.setPower(-1);
+                break;
+            case "stop":
+                motorLeft.setPower(0);
+                motorRight.setPower(0);
+                break;
+            default:
+                motorLeft.setPower(0);
+                motorRight.setPower(0);
+                break;
+        }
+    } 
+    void telemetryCall(Object... dataPairs) { /* logging more than one telemetry items */
+      for (int i = 0; i < dataPairs.length; i += 2) {
+        String label = (String) dataPairs[i];
+        Object value = dataPairs[i + 1];
+        telemetry.addData(label, value);
+    }
+    telemetry.update();
+  }
+}
