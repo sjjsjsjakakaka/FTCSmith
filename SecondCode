@@ -37,7 +37,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  */
 @TeleOp
 
-public class test extends LinearOpMode {
+public class testtt extends LinearOpMode {
 
 
     @Override
@@ -45,9 +45,10 @@ public class test extends LinearOpMode {
 
         telemetry.addData("Status", "Initialized");
         telemetry.update();
-        
+        // Wait for the game to start (driver presses PLAY)
         waitForStart();
 
+        // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
             telemetry.addData("Status", "Running");
             telemetry.update();
