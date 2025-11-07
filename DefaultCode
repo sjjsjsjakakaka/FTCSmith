@@ -72,7 +72,7 @@ public class testtt extends LinearOpMode {
         telemetry.addData("Status", "Initialized");
         telemetry.update();
 
-        myMotor = hardwareMap.get(DcMotor.class, "motorName");  // use your actual motor name from config
+        myMotor = hardwareMap.get(DcMotor.class, "motorName");  // change to actual motorname
         myMotor.setDirection(DcMotor.Direction.FORWARD);
         myMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
@@ -82,12 +82,11 @@ public class testtt extends LinearOpMode {
             telemetry.addData("Status", "Running");
             telemetry.update();
 
-            myMotor.setPower(1.0);  // run motor at full power
+            myMotor.setPower(1.0); 
 
-            // you might choose to change power based on gamepad input or other logic
         }
 
-        // Optionally stop motor when the loop ends
+        
         myMotor.setPower(0);
     }
 }
