@@ -1,29 +1,56 @@
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.ColorSensor;
-import com.qualcomm.robotcore.hardware.DistanceSensor;
-import com.qualcomm.hardware.bosch.BNO055IMU;
+package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotor;
+
+@TeleOp(name="MyFIRSTJavaOpMode", group="Linear Opmode")
 public class MyFIRSTJavaOpMode extends LinearOpMode {
-    DcMotor motorLeft;
-    DcMotor motorRight;
-    DcMotor frontLeft;
-    DcMotor frontRight;
-    BNO055IMU imu;
+    private DcMotor motorLeft;
+    private DcMotor motorRight;
+    // If you're not using frontLeft/frontRight, you may remove them
+    private DcMotor frontLeft;
+    private DcMotor frontRight;
 
     @Override
-    public void runOpMode() {
+    public void runOpMode() throws InterruptedException {
+        // Initialize hardware
         motorLeft  = hardwareMap.get(DcMotor.class, "motorLeft");
         motorRight = hardwareMap.get(DcMotor.class, "motorRight");
         frontLeft  = hardwareMap.get(DcMotor.class, "frontLeft");
         frontRight = hardwareMap.get(DcMotor.class, "frontRight");
+
+        //change one side so robot drives straight when both powers equal
+        motorLeft.setDirection(DcMotor.Direction.FORWARD);
+        motorRight.setDirection(DcMotor.Direction.REVERSE);
+        frontLeft.setDirection(DcMotor.Direction.FORWARD);
+        frontRight.setDirection(DcMotor.Direction.REVERSE);
+
+        motorLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        motorRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        frontLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        frontRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+        //DcMotor.ZeroPowerBehavior.FLOAT will allow the motor to avoid applying active resistance against movement, opposite to brake
+
+        telemetry.addData("Status", "Initialized");
+        telemetry.update();
+
         waitForStart();
-        
-        motorLeft.setPower(-0.5);
-        motorRight.setPower(0.5);
-        sleep(1000);
-        motorLeft.setPower(0);
-        motorRight.setPower(0);
-        
+
+        if (opModeIsActive()) {
+            // Example: turn in place for 1 second
+            motorLeft.setPower(-0.5);
+            motorRight.setPower(0.5);
+            frontLeft.setPower(-0.5);
+            frontRight.setPower(0.5);
+
+            sleep(1000);
+
+            motorLeft.setPower(0);
+            motorRight.setPower(0);
+            frontLeft.setPower(0);
+            frontRight.setPower(0);
+        }
     }
 }
