@@ -73,7 +73,7 @@ public class testtt extends LinearOpMode {
         telemetry.update();
 
         myMotor = hardwareMap.get(DcMotor.class, "motorName");  // change to actual motorname
-        myMotor.setDirection(DcMotor.Direction.FORWARD);
+        myMotor.setDirection(DcMotor.Direction.FORWARD); // or reverse if the motor spins the wrong way
         myMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         waitForStart();
