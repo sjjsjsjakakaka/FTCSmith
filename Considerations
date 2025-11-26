@@ -1,1 +1,49 @@
+// Automatic exponential firepower calculation based on ftc robot to goal
+package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotor;
+
+@TeleOp(name = "ExponentialShooterControl")
+public class ExponentialShooterControl extends LinearOpMode {
+
+    DcMotorEx shooter;
+
+    @Override
+    public void runOpMode() throws InterruptedException {
+
+        shooter = hardwareMap.get(DcMotorEx.class, "shooter");
+        shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        // --- Exponential curve tuning constants ---
+        double a = 1200;   // base RPM
+        double b = 0.015;  // growth factor (adjust for curve shape)
+
+        waitForStart();
+
+        while (opModeIsActive()) {
+
+            // distance from goal using whatever sensor 
+            double distanceMeters = getDistanceToGoal();   // ← you implement this
+
+            
+            // RPM = a * e^(b * distance)
+            double targetRPM = a * Math.exp(b * distanceMeters);
+
+            shooter.setVelocity(targetRPM);
+
+            telemetry.addData("distance (meters)", distanceMeters);
+            telemetry.addData("targ RPM", targetRPM);
+            telemetry.addData("actual RPM", shooter.getVelocity());
+            telemetry.update();
+        }
+    }
+
+    // Placeholder method — replace with your distance measurement
+    private double getDistanceToGoal() {
+        // return your computed distance in meters
+        return 2.0;   // example default
+    }
+}
