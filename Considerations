@@ -26,7 +26,7 @@ public class ExponentialShooterControl extends LinearOpMode {
         while (opModeIsActive()) {
 
             // distance from goal using whatever sensor 
-            double distanceMeters = getDistanceToGoal();   // ← you implement this
+            double distanceMeters = getDistanceToGoal();   
 
             
             // RPM = a * e^(b * distance)
