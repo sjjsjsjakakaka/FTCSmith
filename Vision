@@ -1,1 +1,51 @@
+import org.firstinspires.ftc.vision.VisionPortal;
+import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
+import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
+private AprilTagProcessor aprilTag;
+visionPortal = new VisionPortal.Builder().setCamera(hardwareMap.get(WebcamName.class, "Webcam 1")).
+              setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"))
+              .addProcessor(aprilTag).build();
+
+double distanceFrom = 12; //12 inches from goal
+
+List<AprilTagDetection> currentDetections = aprilTag.getDetections();
+boolean tagFound = false;
+AprilTagDetection targetTag = null;
+
+for (AprilTagDetection detection : currentDetections) { //looping throu to update
+    if (detection.metadata != null) {
+    /* 
+    tagFound = true;
+    targetTag = detection;
+    break; //break out of the loop after we find one
+    */
+        tagFound = true;
+        targetTag = detection;
+        telemetry.addLine(String.format("\n==== (ID %d) %s", detection.id, detection.metadata.name));
+        telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (inch)", detection.ftcPose.x, detection.ftcPose.y, detection.ftcPose.z));
+        telemetry.addLine(String.format("PRY %6.1f %6.1f %6.1f  (deg)", detection.ftcPose.pitch, detection.ftcPose.roll, detection.ftcPose.yaw));
+    } else {
+        telemetry.addLine(String.format("\n==== (ID %d) Unknown", detection.id));
+        telemetry.addLine(String.format("Center %6.0f %6.0f (pixels)", detection.center.x, detection.center.y));
+    }
+}
+
+
+if(tagFound && gamepad1.x) {
+double tarRange = (targetTag.ftcPose.range - distanceFrom); //range is going to update with movement so subtract until it reaches 0 and pauses
+double tarBearing = targetTag.ftcPose.bearing;
+
+double drive = Range.clip(tarRange * 0.02, -0.5, 0.5); //capping speed to 1/2 of max
+double turn = Range.clip(tarBearing * 0.01, -0.5, 0.5);
+
+motor.setPower(drive - turn);
+motor1.setPower(drive + turn);
+}
+
+
+/* 
+detection.ftcPose.range: the direction distance from camera to the tag - move forward until the range is at target distance
+detection.ftcPose.bearing: rotate until the bearing is 0 (centered)
+can also strafe side to side until the x offset is 0 (doing this in a slow pace since such speed can risk going over)
+*/
