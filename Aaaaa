@@ -1,0 +1,137 @@
+package org.firstinspires.ftc.teamcode;
+
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.Servo;
+
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.opencv.core.*;
+import org.opencv.imgproc.Imgproc;
+import org.openftc.easyopencv.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@TeleOp(name="SmithFTC", group="TeleOp")
+public class Motor extends LinearOpMode {
+
+    private DcMotorEx motor, motor1, motor2, motor3;
+    private Servo servo;
+    private OpenCvWebcam webcam;
+    private MultiColorPipeline pipeline;
+
+    static final double TICKS_PER_REV = 28 * 20;
+
+    @Override
+    public void runOpMode() {
+        
+        motor  = hardwareMap.get(DcMotorEx.class, "motor0");
+        motor1 = hardwareMap.get(DcMotorEx.class, "motor1");
+        motor2 = hardwareMap.get(DcMotorEx.class, "motor2");
+        motor3 = hardwareMap.get(DcMotorEx.class, "motor3");
+        servo  = hardwareMap.get(Servo.class, "servo0");
+
+        motor.setDirection(DcMotorEx.Direction.REVERSE);
+        motor3.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+
+        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier(
+            "cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
+        webcam = OpenCvCameraFactory.getInstance().createWebcam(
+            hardwareMap.get(WebcamName.class, "Webcam 1"), cameraMonitorViewId);
+
+        pipeline = new MultiColorPipeline();
+        webcam.setPipeline(pipeline);
+        webcam.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener() {
+            @Override public void onOpened() { webcam.startStreaming(640, 480, OpenCvCameraRotation.UPRIGHT); }
+            @Override public void onError(int errorCode) {}
+        });
+
+        waitForStart();
+
+        while (opModeIsActive()) {
+            double drive = -gamepad1.left_stick_y;
+            double turn  = -gamepad1.right_stick_x;
+            motor.setPower(drive - turn);
+            motor1.setPower(drive + turn);
+
+            // Shooter logic
+            if (gamepad1.right_trigger > 0.1 && pipeline.targetDetected) {
+                motor3.setVelocity((300.0 / 60.0) * TICKS_PER_REV);
+            } else {
+                motor3.setVelocity(0);
+            }
+
+            telemetry.addData("Targeting", pipeline.detectedColorName);
+            telemetry.addData("Target Area", pipeline.largestArea);
+            telemetry.update();
+        }
+    }
+
+    public static class MultiColorPipeline extends OpenCvPipeline {
+        Mat hsvMat = new Mat();
+        public String detectedColorName = "None";
+        public double largestArea = 0;
+        public boolean targetDetected = false;
+
+        class ColorTarget {
+            String name;
+            Scalar lower, upper, boxColor;
+            ColorTarget(String n, Scalar l, Scalar u, Scalar b) {
+                name = n; lower = l; upper = u; boxColor = b;
+            }
+        }
+
+        List<ColorTarget> targets = new ArrayList<>();
+
+        public MultiColorPipeline() {
+            // Added GREEN range: Hue 35 to 85
+            targets.add(new ColorTarget("GREEN", new Scalar(35, 60, 40), new Scalar(85, 255, 255), new Scalar(0, 255, 0)));
+            targets.add(new ColorTarget("PURPLE", new Scalar(130, 80, 40), new Scalar(165, 255, 255), new Scalar(255, 0, 255)));
+            targets.add(new ColorTarget("RED", new Scalar(0, 100, 100), new Scalar(10, 255, 255), new Scalar(255, 0, 0)));
+            targets.add(new ColorTarget("BLUE", new Scalar(100, 100, 100), new Scalar(130, 255, 255), new Scalar(0, 0, 255)));
+        }
+
+        @Override
+        public Mat processFrame(Mat input) {
+            Imgproc.cvtColor(input, hsvMat, Imgproc.COLOR_RGB2HSV);
+            
+            targetDetected = false;
+            double currentMaxArea = 0;
+            String currentTargetName = "None";
+
+            for (ColorTarget target : targets) {
+                Mat mask = new Mat();
+                Core.inRange(hsvMat, target.lower, target.upper, mask);
+
+                List<MatOfPoint> contours = new ArrayList<>();
+                Mat hierarchy = new Mat();
+                Imgproc.findContours(mask, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+
+                for (MatOfPoint c : contours) {
+                    double area = Imgproc.contourArea(c);
+                    if (area > 1500) {
+                        Rect rect = Imgproc.boundingRect(c);
+                        
+                        // Draw box for every color it sees
+                        Imgproc.rectangle(input, rect, target.boxColor, 2);
+                        Imgproc.putText(input, target.name, new Point(rect.x, rect.y - 5), 
+                                       Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, target.boxColor, 2);
+
+                        if (area > currentMaxArea) {
+                            currentMaxArea = area;
+                            currentTargetName = target.name;
+                            targetDetected = true;
+                        }
+                    }
+                }
+                mask.release();
+                hierarchy.release();
+            }
+            
+            detectedColorName = currentTargetName;
+            largestArea = currentMaxArea;
+            return input;
+        }
+    }
+}
