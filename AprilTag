@@ -1,0 +1,58 @@
+// Import the Range class to fix the Range.clip errors
+import com.qualcomm.robotcore.util.Range;
+import org.firstinspires.ftc.vision.VisionPortal;
+import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
+import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
+import java.util.List;
+
+// 1. Initialize the processor properly
+aprilTag = AprilTagProcessor.easyCreateWithDefaults();
+
+// 2. Build the Vision Portal (fixed double setCamera call)
+visionPortal = new VisionPortal.Builder()
+        .setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"))
+        .addProcessor(aprilTag)
+        .build();
+
+double distanceFrom = 12.0; // Target distance in inches
+boolean tagFound = false;
+AprilTagDetection targetTag = null;
+
+// 3. Detection Loop
+List<AprilTagDetection> currentDetections = aprilTag.getDetections();
+for (AprilTagDetection detection : currentDetections) {
+    if (detection.metadata != null) {
+        tagFound = true;
+        targetTag = detection;
+        
+        telemetry.addData("Target", "ID %d (%s)", detection.id, detection.metadata.name);
+        telemetry.addData("Range", "%5.1f inches", detection.ftcPose.range);
+        telemetry.addData("Bearing", "%5.1f degrees", detection.ftcPose.bearing);
+        break; // Found our target, exit loop
+    }
+}
+
+// 4. Movement Logic (Gamepad X must be held)
+if (tagFound && gamepad1.x) {
+    // Determine how far we are from the 12-inch goal
+    double rangeError = (targetTag.ftcPose.range - distanceFrom);
+    double bearingError = targetTag.ftcPose.bearing;
+
+    // Gain constants (Tune these! If robot oscillates, lower them)
+    final double DRIVE_GAIN  = 0.02; 
+    final double TURN_GAIN   = 0.01; 
+
+    // Calculate power
+    double drive = Range.clip(rangeError * DRIVE_GAIN, -0.5, 0.5);
+    double turn  = Range.clip(bearingError * TURN_GAIN, -0.4, 0.4);
+
+    // Apply to motors (Standard Arcade Drive logic)
+    leftDrive.setPower(drive - turn);
+    rightDrive.setPower(drive + turn);
+} else {
+    // Stop if no tag is seen or button is released
+    leftDrive.setPower(0);
+    rightDrive.setPower(0);
+}
+
+telemetry.update();
