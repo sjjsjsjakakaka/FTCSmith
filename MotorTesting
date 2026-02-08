@@ -1,78 +1,117 @@
-/*
-Copyright 2025 FIRST Tech Challenge Team FTCSmith
+double TICKS_PER_REV = 28; // 28 ticks encoder
+double MAX_RPM = 6000; // max rpm
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
-associated documentation files (the "Software"), to deal in the Software without restriction,
-including without limitation the rights to use, copy, modify, merge, publish, distribute,
-sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+// calibrate values below
+double DISTANCE_CLOSE = 24; // 2 feet in inches
+double RPM_CLOSE = 2500.0;
+double DISTANCE_FAR = 120; // 10 feet in inches
+double RPM_FAR = 4500.0;
 
-The above copyright notice and this permission notice shall be included in all copies or substantial
-portions of the Software.
+/* inside of loop */
+if (gamepad1.x && targetTag != null) {
+                double tarRange = (targetTag.ftcPose.range - DISTANCE_FROM_GOAL);
+            //    drive = Range.clip(tarRange * 0.05, -0.5, 0.5);
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
-NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
-package org.firstinspires.ftc.teamcode;
+                double bearingError = targetTag.ftcPose.bearing; //0 is the center
 
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.util.ElapsedTime;
+                camHorizontalCenter = (bearingError * SMOOTHING_FACTOR) + (camHorizontalCenter * (1 - SMOOTHING_FACTOR));
 
-@TeleOp
+                if (Math.abs(camHorizontalCenter) > 2.0) {
+                    turn = Range.clip(camHorizontalCenter * 0.03, -0.4, 0.4);
+                } else {
+                    turn = 0;
+                }
+            }
 
-public class Motor extends LinearOpMode {
-    DcMotor motor;
+            else if (gamepad1.b && ballProcessor.targetDetected) {
+                double imageCenter = ballProcessor.cameraWidth / 2.0;
 
+                camHorizontalCenter = (ballProcessor.targetX * SMOOTHING_FACTOR) + (camHorizontalCenter * (1 - SMOOTHING_FACTOR));
 
-    @Override
-    public void runOpMode() {
-        /* VARIABLES */
-        motor = hardwareMap.get(DcMotor.class, "motor0");
-        /* 
-                motor1 = hardwareMap.get(DcMotor.class, "motor1");
+                double error = camHorizontalCenter - imageCenter;
 
-        */
-
-        telemetry.addData("Status", "Initialized");
-        telemetry.update();
+                if (Math.abs(error) > 20) {
+                    turn = Range.clip(error * 0.002, -0.4, 0.4);
+                } else {
+                    turn = 0;
+                }
+            }
+double shooterVelocity = 0;
+if (gamepad1.right_trigger > 0.1) {
+    if (targetTag != null) {
+        double distance = targetTag.ftcPose.range;
         
-        waitForStart();
-        while (opModeIsActive()) {
-            motor.setPower(gamepad1.left_stick_y);
-            telemetry.addData("controllerY", gamepad1.left_stick_y);
-            telemetry.addData("controllerX", gamepad1.left_stick_x);
-            telemetry.update();
-            
-            /* 
-            public void updateJoystick(Gamepad gamepad1) {
-            double x = gamepad1.left_stick_x;
-            double y = gamepad1.left_stick_y;
-            if(Math.abs(x) > 0 || Math.abs(y) > 0) {
-            lastPos = {x: x y: y}; //get last pos
-            } else if (Math.abs(gamepad1.left_stick_y) < 0) {
-            }
-            }
-            */
-             
-            
-            
-            /*
-             -------- IDEAS -------- 12/16
-            Motorspeed based on controller X and Y
-            Velocity-based shooter system
-            Positioning based on coordinates
-            */
-            
-            
-            
-            
-        }
+        // linear interpolation: y = y1 + ((y2 - y1) / (x2 - x1)) * (x - x1)
+        double slope = (RPM_FAR - RPM_CLOSE) / (DISTANCE_FAR - DISTANCE_CLOSE);
+        double targetRPM = RPM_CLOSE + (slope * (distance - DISTANCE_CLOSE));
+        
+        // limiter to stay at that rpm
+        targetRPM = Range.clip(targetRPM, 1000, MAX_RPM);
+        
+        // (RPM / 60 seconds) * ticks per rev
+        shooterVelocity = (targetRPM / 60.0) * TICKS_PER_REV;
+    } else {
+        // default rpm if no tag is found
+        shooterVelocity = (3000 / 60.0) * TICKS_PER_REV;
     }
 }
+
+motor2.setVelocity(shooterVelocity);
+motor3.setVelocity(shooterVelocity);
+
+    public static class BallProcessor implements VisionProcessor {
+        private Mat hsvMat = new Mat();
+        private Mat maskGreen = new Mat();
+        private Mat maskPurple = new Mat();
+        private Mat combinedMasks = new Mat();
+        private Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(5, 5));
+
+        public boolean targetDetected = false;
+        public double targetX = 0;
+        public int cameraWidth = 640;
+
+        @Override
+        public void init(int width, int height, CameraCalibration calibration) {
+            this.cameraWidth = width;
+        }
+
+        @Override
+        public Object processFrame(Mat frame, long captureTimeNanos) {
+            Imgproc.cvtColor(frame, hsvMat, Imgproc.COLOR_RGB2HSV);
+
+            Core.inRange(hsvMat, new Scalar(35, 80, 40), new Scalar(95, 255, 255), maskGreen);
+            Core.inRange(hsvMat, new Scalar(130, 60, 50), new Scalar(175, 255, 255), maskPurple);
+
+            // Combine masks
+            Core.bitwise_or(maskGreen, maskPurple, combinedMasks);
+            Imgproc.morphologyEx(combinedMasks, combinedMasks, Imgproc.MORPH_CLOSE, kernel);
+
+            List<MatOfPoint> contours = new ArrayList<>();
+            Imgproc.findContours(combinedMasks, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+
+            double maxArea = 0;
+            Rect largestRect = null;
+            for (MatOfPoint c : contours) {
+                double area = Imgproc.contourArea(c);
+                if (area > 1200 && area > maxArea) {
+                    maxArea = area;
+                    largestRect = Imgproc.boundingRect(c);
+                }
+            }
+
+            if (largestRect != null) {
+                targetDetected = true;
+                targetX = largestRect.x + (largestRect.width / 2.0);
+                Imgproc.rectangle(frame, largestRect, new Scalar(0, 255, 255), 3);
+            } else {
+                targetDetected = false;
+            }
+
+            maskGreen.release();
+            maskPurple.release();
+
+            return null;
+        }
+
+        @Override public void onDrawFrame(Canvas canvas, int onscreenWidth, int onscreenHeight, float scaleBmpPxToCanvasPx, float scaleCanvasPxToDrawPx, Object userContext) {}
+    }
