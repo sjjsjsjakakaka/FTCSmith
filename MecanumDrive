@@ -1,3 +1,10 @@
+/*
+Front Left = Drive + Turn + Strafe
+Front Right = Drive - Turn - Strafe
+Back Left = Drive + Turn - Strafe
+Back Right = Drive - Turn + Strafe.
+
+*/
 
 package org.firstinspires.ftc.teamcode;
 
