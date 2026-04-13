@@ -1,1 +1,77 @@
 
+package org.firstinspires.ftc.teamcode;
+
+import android.graphics.Canvas;
+import com.qualcomm.robotcore.hardware.NormalizedRGBA;
+import com.qualcomm.robotcore.hardware.ColorSensor;
+import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
+import android.graphics.Color;
+
+import com.qualcomm.robotcore.hardware.SwitchableLight;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.util.Range;
+
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.robotcore.internal.camera.calibration.CameraCalibration;
+import org.firstinspires.ftc.vision.VisionPortal;
+import org.firstinspires.ftc.vision.VisionProcessor;
+import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
+import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
+import org.opencv.core.*;
+import org.opencv.imgproc.Imgproc;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@TeleOp(name="SmithFTC", group="TeleOp")
+public class Motor extends LinearOpMode {
+
+    private DcMotorEx motor, motor1, motor2, motor3;
+    private Servo servo0;
+    
+    
+    
+    private VisionPortal visionPortal;
+    private AprilTagProcessor aprilTag;
+    private BallProcessor ballProcessor;
+    private NormalizedColorSensor colorSensor;
+
+    static final double TICKS_PER_REV = 28 * 20; 
+    private double lastPowerL = 0, lastPowerR = 0;
+    private final double MAX_STEP = 0.04; 
+    private double filteredTargetX = 640/2; 
+    private final double SMOOTHING_FACTOR = 0.2; 
+    private final double DISTANCE_FROM_GOAL = 12.0; 
+
+    @Override
+    public void runOpMode() {
+        colorSensor = hardwareMap.get(NormalizedColorSensor.class, "colorSensor");
+        leftRear = hardwareMap.get(DcMotorEx.class, "motor0");
+        rightRear = hardwareMap.get(DcMotorEx.class, "motor1");
+        frontLeft = hardwareMap.get(DcMotorEx.class, "motor2");
+        frontRight = hardwareMap.get(DcMotorEx.class, "motor3");
+
+        motor.setDirection(DcMotorEx.Direction.REVERSE);
+        motor2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        motor3.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        aprilTag = AprilTagProcessor.easyCreateWithDefaults();
+        ballProcessor = new BallProcessor();
+
+        visionPortal = new VisionPortal.Builder()
+                .setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"))
+                .addProcessors(aprilTag, ballProcessor)
+                .setStreamFormat(VisionPortal.StreamFormat.YUY2)
+                .setAutoStopLiveView(true)
+                .build();
+
+        waitForStart();
+
+        while (opModeIsActive()) {
+    }
+ 
+}
